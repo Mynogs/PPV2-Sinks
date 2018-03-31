@@ -1,0 +1,64 @@
+-- V1.0a AR
+-- 19.09.2017 15:21:54 AR V1.0b
+
+generic = {
+  parameter = {
+  },
+
+  init = function(self)
+    block.setInputsPinCount(1)
+    block.setInputPinTypeRestrains(1, 'nil', 'boolean', 'number')
+    block.setOutputsPinCount(0)
+    block.modifyFlags('SupressStartFunctionCall', true)
+    block.modifyFlags('SupressStopFunctionCall', true)
+  end,
+
+  open = function(self)
+    gui.add('Info', 'Info', 'Stop', 'Stop simulation when input is nil, false or non-zero')
+    gui.setSize()
+  end,
+
+  apply = function(self)
+  end,
+
+  close = function()
+  end,
+
+  avatar = function(self)
+    return block.getDefaultAvatar(0x5F, "'Stop'", [[
+      draw.line(
+        px(25), py(0), px(75), py(0), px(100), py(25), px(100), py(75),
+        px(75), py(100), px(25), py(100), px(0), py(75), px(0), py(25),
+        px(25), py(0)
+      )
+    ]])
+  end,
+
+  generate = function(self)
+    local source =
+      [==[
+        return {
+
+          step = function(a)
+            local function stop()
+              finish(block, "Stop condition detected")
+              sim.finish = true
+            end
+            if not a then
+              stop()
+            elseif type(a) == 'boolean' then
+              if not a then
+                stop()
+              end
+            elseif a ~= 0.0 then
+              stop()
+            end
+          end
+
+        }
+      ]==]
+    return source
+  end,
+
+}
+

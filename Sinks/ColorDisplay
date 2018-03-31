@@ -1,0 +1,75 @@
+-- V1.0a AR
+-- 31.12.2016 11:58:36 AR V1.0b
+-- 01.04.2017 06:33:21 AR V1.0c
+
+-- During sim the input value is stored in the token list.
+-- The key it the block UUID, the value is the input value as string.
+-- The avatar get the value from the token table and show it.
+-- AR
+
+block.setSize(151, 26)
+
+generic = {
+  parameter = {
+    condition = 'a'
+  },
+
+  init = function(self)
+    block.setInputsPinCount(1)
+    block.setInputPinTypeRestrains(1, 'nil', 'boolean', 'number', 'string')
+    block.setOutputsPinCount(0)
+    block.modifyFlags('SupressStartFunctionCall', true)
+    block.modifyFlags('SupressStopFunctionCall', true)
+  end,
+
+  open = function(self)
+    gui.add('Info', 'Info', 'Display', [[
+Display a nil, boolean, number or string.
+The background color is set to green or red depending of the
+boolean resulat of the condition.
+    ]])
+    gui.add('Edit', 'EditCondition', 'Condition (true for green)', {Left = 140, Width = 400})
+    gui.set('EditCondition', 'Expression', self.parameter.condition)
+    gui.setSize()
+  end,
+
+  apply = function(self)
+    self.parameter.condition = gui.get('EditCondition', 'Expression')
+  end,
+
+  close = function()
+  end,
+
+  avatar = function(self)
+    return block.getDefaultAvatar{
+      Type = 0x50,
+      CenterTextSource = 'token.get(\'.\' .. self.uuid .. \'.value\')',
+      CenterDrawSource = 'draw.rect(3, 3, w - 6, h - 6)',
+      FillColorSource = '(token.get(\'.\' .. self.uuid .. \'.ok\') == \'true\') and \'0x80FF80\' or \'0x8080FF\'',
+    }
+  end,
+
+  generate = function(self, remote)
+    if remote then
+      return nil
+    end
+    local source =
+      [==[
+        return {
+
+          step = function(a)
+            token.set('.UUID.value', a)
+            token.set('.UUID.ok', CONDITION)
+          end
+
+        }
+      ]==]
+    local replaces = {
+      ['UUID'] = block.getUUID(),
+      ['CONDITION'] = self.parameter.condition,
+    }
+    return string.gsub(source, '%a+', replaces)
+  end,
+
+}
+
