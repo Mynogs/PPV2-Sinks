@@ -1,0 +1,89 @@
+-- 07.04.2018 08:54:10 AR V1.0a
+-- 09.04.2018 18:31:48 AR V1.0b
+
+-- During sim the input value is stored in the token list.
+-- The key it the block UUID, the value is the input value as string.
+-- The avatar get the value from the token table and show it.
+-- AR
+
+block.setSize(151, 26)
+
+generic = {
+  parameter = {
+    value = 0
+  },
+
+  init = function(self)
+    block.setInputsPinCount(1)
+    block.setOutputsPinCount(0)
+    block.setInputPinTypeRestrains(1, 'table')
+    block.modifyFlags('SupressStopFunctionCall', true)
+  end,
+
+  open = function(self)
+    gui.add('Info', 'Info', 'Display',
+[[
+Interprete input as one or two dimensional list
+and display it
+]])
+    gui.setSize()
+  end,
+
+  apply = function(self)
+  end,
+
+  close = function()
+  end,
+
+  avatar = function(self)
+    --return block.getDefaultAvatar(0x50, 'token.get(\'.\' .. self.uuid)', 'draw.rect(3, 3, w - 6, h - 6)')
+    return block.getDefaultAvatar{
+      Type = 0x50,
+      CenterDrawSource = [==[
+        draw.rect(3, 3, w - 6, h - 6)
+        draw.text(5, 5, w - 10, h - 10, token.get('.' .. self.uuid), 0)
+      ]==],
+      --FillColorSource = '0.36, 0.37, 0.42',
+      --PinNameColorSource = '1, 1, 1',
+    }
+  end,
+
+  generate = function(self, remote)
+    if remote then
+      return nil
+    end
+    local source =
+      [==[
+        local block = {}
+
+        block.dump = function(a, d)
+          if type(a) == 'table' then
+            local s = '\n'
+            for k, v in pairs(a) do
+              if type(k) ~= 'number' then
+                k = '\'' .. k .. '\''
+              end
+              s = s .. string.rep('  ', d) .. '[' .. k .. '] = ' .. block.dump(v, d + 1) .. '\n'
+            end
+            return s
+          end
+          return tostring(a)
+        end
+
+        block.start = function()
+        end
+
+        block.step = function(a)
+          token.set('.UUID', block.dump(a, 0))
+        end
+
+        return block
+      ]==]
+    local replaces = {
+      ['UUID'] = block.getUUID(),
+    }
+    return string.gsub(source, '%a+', replaces)
+  end,
+
+}
+
