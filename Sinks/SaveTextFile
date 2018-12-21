@@ -1,0 +1,121 @@
+-- 22.07.2018 16:36:28 AR V1.0a
+-- 24.10.2018 08:21:23 AR V1.0b Add token replace
+
+block.setSize(151, 51)
+
+generic = {
+  parameter = {
+    path = [[c:\test.json]],
+    appendMode = true,
+    token = false,
+    template =
+[[
+{
+  "Boolean1": BOOL1,
+  "Number1": NUM1,
+  "String1": "STR1",
+}
+]]
+  },
+
+  refreshPins = function(self)
+    local items = {}
+    for token in self.parameter.template:gmatch('%u%u%u+%d*') do
+      items[#items + 1] = token
+    end
+    block.setInputsPinCount(#items + 1)
+    block.setInputPinName(1, 'trigger')
+    block.setInputPinTypeRestrains(1, 'boolean')
+    for i = 1, #items do
+      block.setInputPinName(i + 1, items[i])
+      block.setInputPinTypeRestrains(i + 1, 'boolean', 'number', 'string')
+    end
+  end,
+
+  init = function(self)
+    block.needPPVersion(2, 0, 'l')
+    block.modifyFlags('SupressStopFunctionCall', true)
+    generic.refreshPins(self)
+  end,
+
+  open = function(self)
+    gui.add('Info', 'Info', 'Save text file', [[
+If trigger rise all placeholders are replaced with actual input values.
+A placeholder is a uppcase word with minimum two letters and
+optional following digits
+]])
+    gui.add('Edit', 'EditPath', 'File path', {Width = 400})
+    gui.add('CheckBox', 'CheckBoxAppendMode', 'Append mode')
+    gui.add('CheckBox', 'CheckBoxToken', 'Replace file path [...] with token',  {Width = 400})
+    gui.add('Memo', 'MemoTemplate', 'Template',  {Width = 400, Height = 600})
+    gui.set('EditPath', 'Text', self.parameter.path)
+    gui.set('CheckBoxAppendMode', 'Checked', self.parameter.appendMode)
+    gui.set('CheckBoxToken', 'Checked', self.parameter.token)
+    gui.set('MemoTemplate', 'Text', self.parameter.template)
+    gui.setSize()
+  end,
+
+  apply = function(self)
+    self.parameter.path = gui.get('EditPath', 'Text')
+    self.parameter.appendMode = gui.get('CheckBoxAppendMode', 'Checked')
+    self.parameter.token = gui.get('CheckBoxToken', 'Checked')
+    self.parameter.template = gui.get('MemoTemplate', 'Text')
+    generic.refreshPins(self)
+  end,
+
+  close = function()
+  end,
+
+  avatar = function(self)
+    return block.getDefaultAvatar(0x00, "'Save\\ntext\\nfile'")
+  end,
+
+  generate = function(self, remote)
+    local source =
+      [==[
+        local block = {}
+
+        block.start = function()
+          block.template =
+[[
+TEMPLATE]]
+        end
+
+        block.step = function(trigger, ...)
+          if not block.trigger and trigger then
+            local a = {...}
+            local s = block.template
+REPLACER
+            local path = [[PATH]]
+TOKEN
+            local f = assert(io.open(path, 'MODE'))
+            f:write(s)
+            f:close()
+            --print(s)
+          end
+          block.trigger = trigger
+        end
+
+        return block
+      ]==]
+    local replacer = ''
+    local i = 1
+    for token in self.parameter.template:gmatch('%u%u%u+%d*') do
+      replacer = replacer .. string.rep(' ', 12) ..  "s = string.gsub(s, '" .. token .. "', tostring(a[" .. i .. "]))\n"
+      i = i + 1
+    end
+    local replaces = {
+      ['PATH'] = self.parameter.path,
+      ['TEMPLATE'] = self.parameter.template,
+      ['REPLACER'] = replacer,
+      ['TOKEN'] = self.parameter.token and "path = path:gsub('%[(%w+)%]', function(k) return require('token').get(k) end)" or '',
+      ['MODE'] = self.parameter.appendMode and 'a' or 'w'
+    }
+    return string.gsub(source, '%a+', replaces)
+  end,
+
+}
+
+local block = {}
+
+
