@@ -5,6 +5,8 @@ block.setSize(51, 51)
 generic = {
   parameter = {
     inputs = 1,
+    xMax = 1.0,
+    yMax = 1.0
   },
 
   init = function(self)
@@ -23,7 +25,11 @@ Input for every pin must be a array of an xy array:
 {{x1, y1}, {x2, y2}, {x3, y3},... {xn, yn}}
     ]])
     gui.add('Edit', 'EditNumberOfInputs', 'Number of inputs')
+    gui.add('Edit', 'EditXMax', 'X max', {NumberMode = true})
+    gui.add('Edit', 'EditYMax', 'Y max', {NumberMode = true})
     gui.set('EditNumberOfInputs', 'Integer', self.parameter.inputs)
+    gui.set('EditXMax', 'Number', self.parameter.xMax)
+    gui.set('EditYMax', 'Number', self.parameter.yMax)
     gui.setSize()
   end,
 
@@ -33,6 +39,8 @@ Input for every pin must be a array of an xy array:
     for i = 1, self.parameter.inputs do
       block.setInputPinTypeRestrains(i, 'table')
     end
+    self.parameter.xMax = gui.get('EditXMax', 'Number')
+    self.parameter.yMax = gui.get('EditYMax', 'Number')
   end,
 
   close = function()
@@ -43,13 +51,14 @@ Input for every pin must be a array of an xy array:
 [[
 do
   local x0, y0 = w / 2, h / 2
-  draw.setColorA(0, 0, 0)
-  draw.box(2, 2, w - 3, h - 3)
-  draw.setColorA(0.5, 0.5, 0.5)
-  draw.line(0, y0, w, y0)
-  draw.line(x0, 0, x0, h)
   local p = messagePack.unpack(token.get('.' .. self.uuid))
-  if not p then
+  local xMax, yMax
+  if p then
+    xMax = p.xMax or 1.0
+    yMax = p.yMax or 1.0
+  else
+    xMax = 25
+    yMax = 25
     p = {
       {
         color = {1, 1, 0},
@@ -61,11 +70,20 @@ do
       }
     }
   end
+  draw.setColorA(0, 0, 0)
+  draw.box(2, 2, w - 3, h - 3)
+  draw.setColorA(0.5, 0.5, 0.5)
+  draw.line(0, y0, w, y0)
+  draw.line(x0, 0, x0, h)
+  draw.setColorA(0.7, 0.7, 0.7)
+  draw.text(w - 3, h / 2, 0, 0, xMax, 2)
+  draw.text(w / 2, 3, 0, 0, yMax, 2)
+
   for i = 1, #p do
     local xy = p[i]
     draw.setColorA(p[i].color or {1, 1, 1})
     for j = 1, #xy do
-      local x, y = x0 + xy[j][1], y0 - xy[j][2]
+      local x, y = x0 + xy[j][1] / xMax * (w - 4.0) / 2.0, y0 - xy[j][2] / yMax * (h - 4.0) / 2.0
       draw.line(x - 2, y, x + 3, y)
       draw.line(x, y - 2, x, y + 3)
     end
@@ -103,6 +121,8 @@ end
               a[i].color = block.colors[(i - 1) % 6 + 1]
             end
           end
+          a.xMax = XMAX
+          a.yMax = YMAX
           block.token.set('.UUID', block.messagePack.pack(a))
         end
 
@@ -110,6 +130,8 @@ end
       ]==]
     local replaces = {
       ['UUID'] = block.getUUID(),
+      ['XMAX'] = self.parameter.xMax,
+      ['YMAX'] = self.parameter.yMax,
     }
     return string.gsub(source, '%a+', replaces)
   end,
